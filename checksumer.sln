@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "checksumer", "checksumer\checksumer.csproj", "{BDF9FC60-C4A3-450D-9E0D-6521F78A9534}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "checksumer.Tests", "checksumer.Tests\checksumer.Tests.csproj", "{29963595-4B0A-488A-9D60-D5A57BB654B5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BDF9FC60-C4A3-450D-9E0D-6521F78A9534}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BDF9FC60-C4A3-450D-9E0D-6521F78A9534}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BDF9FC60-C4A3-450D-9E0D-6521F78A9534}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BDF9FC60-C4A3-450D-9E0D-6521F78A9534}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29963595-4B0A-488A-9D60-D5A57BB654B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29963595-4B0A-488A-9D60-D5A57BB654B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29963595-4B0A-488A-9D60-D5A57BB654B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29963595-4B0A-488A-9D60-D5A57BB654B5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
