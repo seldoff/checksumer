@@ -73,7 +73,7 @@ public class BuildTests
         metaReader.Read();
 
         Assert.AreEqual(1, metaReader.GetInt32(0));
-        Assert.AreEqual(Path.Combine(".", "TestData", "dir1"), metaReader.GetString(1));
+        Assert.AreEqual(Path.GetFullPath(Path.Combine(".", "TestData", "dir1")), metaReader.GetString(1));
         var created = new DateTime(metaReader.GetInt64(2));
         Assert.LessOrEqual(DateTime.UtcNow - created, TimeSpan.FromSeconds(1));
 

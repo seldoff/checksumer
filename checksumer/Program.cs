@@ -459,6 +459,9 @@ public static class Program
 
     public static int Build(string path, string databaseFile, IReadOnlyCollection<string> ignoredFiles)
     {
+        databaseFile = Path.GetFullPath(databaseFile);
+        path = Path.GetFullPath(path);
+
         if (File.Exists(databaseFile))
         {
             Console.WriteLine($"Database file '{databaseFile}' already exists");
@@ -472,7 +475,6 @@ public static class Program
         }
 
         var sw = Stopwatch.StartNew();
-        databaseFile = Path.GetFullPath(databaseFile);
         Console.WriteLine($"Building index ('{databaseFile}') for path '{path}'");
 
         var files = GetFiles(path, databaseFile, ignoredFiles);
