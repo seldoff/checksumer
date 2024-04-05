@@ -212,8 +212,9 @@ public static class Program
         var created = reader.GetInt64(1);
         var modified = reader.GetInt64(2);
 
-        if (fileInfo.Length != size || fileInfo.CreationTimeUtc.Ticks != created ||
-            fileInfo.LastWriteTimeUtc.Ticks != modified)
+        if (fileInfo.Length != size ||
+            ToUnixTime(fileInfo.CreationTimeUtc) != created ||
+            ToUnixTime(fileInfo.LastWriteTimeUtc) != modified)
         {
             Console.WriteLine($"File '{file}' has changed");
             return VerifyFileResult.FileChanged;
@@ -384,8 +385,9 @@ public static class Program
             var created = reader.GetInt64(1);
             var modified = reader.GetInt64(2);
 
-            if (fileInfo.Length == size && fileInfo.CreationTimeUtc.Ticks == created &&
-                fileInfo.LastWriteTimeUtc.Ticks == modified)
+            if (fileInfo.Length == size &&
+                ToUnixTime(fileInfo.CreationTimeUtc) == created &&
+                ToUnixTime(fileInfo.LastWriteTimeUtc) == modified)
             {
                 return UpdateFileResult.Unchanged;
             }
@@ -397,8 +399,8 @@ public static class Program
             updateCmd.Parameters.Clear();
             updateCmd.Parameters.AddWithValue("@path", Path.GetRelativePath(path, file));
             updateCmd.Parameters.AddWithValue("@size", fileInfo.Length);
-            updateCmd.Parameters.AddWithValue("@created", fileInfo.CreationTimeUtc.Ticks);
-            updateCmd.Parameters.AddWithValue("@modified", fileInfo.LastWriteTimeUtc.Ticks);
+            updateCmd.Parameters.AddWithValue("@created", ToUnixTime(fileInfo.CreationTimeUtc));
+            updateCmd.Parameters.AddWithValue("@modified", ToUnixTime(fileInfo.LastWriteTimeUtc));
             updateCmd.Parameters.AddWithValue("@hash", hash);
             updateCmd.Parameters.AddWithValue("@hash_of_hash", hashOfHash);
 
@@ -419,8 +421,8 @@ public static class Program
         insertCmd.Parameters.Clear();
         insertCmd.Parameters.AddWithValue("@path", Path.GetRelativePath(path, file));
         insertCmd.Parameters.AddWithValue("@size", fileInfo.Length);
-        insertCmd.Parameters.AddWithValue("@created", fileInfo.CreationTimeUtc.Ticks);
-        insertCmd.Parameters.AddWithValue("@modified", fileInfo.LastWriteTimeUtc.Ticks);
+        insertCmd.Parameters.AddWithValue("@created", ToUnixTime(fileInfo.CreationTimeUtc));
+        insertCmd.Parameters.AddWithValue("@modified", ToUnixTime(fileInfo.LastWriteTimeUtc));
         insertCmd.Parameters.AddWithValue("@hash", hash);
         insertCmd.Parameters.AddWithValue("@hash_of_hash", hashOfHash);
 
@@ -525,8 +527,8 @@ public static class Program
         cmd.Parameters.Clear();
         cmd.Parameters.AddWithValue("@path", Path.GetRelativePath(path, file));
         cmd.Parameters.AddWithValue("@size", fileInfo.Length);
-        cmd.Parameters.AddWithValue("@created", fileInfo.CreationTimeUtc.Ticks);
-        cmd.Parameters.AddWithValue("@modified", fileInfo.LastWriteTimeUtc.Ticks);
+        cmd.Parameters.AddWithValue("@created", ToUnixTime(fileInfo.CreationTimeUtc));
+        cmd.Parameters.AddWithValue("@modified", ToUnixTime(fileInfo.LastWriteTimeUtc));
         cmd.Parameters.AddWithValue("@hash", hash);
         cmd.Parameters.AddWithValue("@hash_of_hash", hashOfHash);
 
@@ -629,13 +631,5 @@ public static class Program
         return true;
     }
 
-    private static void ReportProgress(int processed, int total, ref DateTimeOffset last)
-    {
-        var now = DateTimeOffset.Now;
-        if (now - last > TimeSpan.FromSeconds(5))
-        {
-            Console.WriteLine($"Processed {processed} of {total} files");
-            last = now;
-        }
-    }
+    private static long ToUnixTime(DateTime date) => new DateTimeOffset(date.ToUniversalTime()).ToUnixTimeSeconds();
 }

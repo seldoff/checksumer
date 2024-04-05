@@ -50,20 +50,20 @@ public class BuildTests
         var empty = rows.Single(r => r.path == "empty.txt");
 
         Assert.AreEqual(15, file1.size);
-        Assert.AreEqual(638478492238318832, file1.created);
-        Assert.AreEqual(638478492396376005, file1.modified);
+        Assert.AreEqual(1712252423, file1.created);
+        Assert.AreEqual(1712252439, file1.modified);
         Assert.AreEqual("4D78990B1F2B696B9BEF40509A05625956AA42E2", BitConverter.ToString(file1.hash).Replace("-", ""));
         Assert.AreEqual("5E1A4EB288B6862B2CAD83143942907E19B093B6", BitConverter.ToString(file1.hashOfHash).Replace("-", ""));
 
         Assert.AreEqual(16, file2.size);
-        Assert.AreEqual(638479235133912349, file2.created);
-        Assert.AreEqual(638479403762984694, file2.modified);
+        Assert.AreEqual(1712326713, file2.created);
+        Assert.AreEqual(1712343576, file2.modified);
         Assert.AreEqual("D5229A9B110B72F7C42A782428034645E1245D50", BitConverter.ToString(file2.hash).Replace("-", ""));
         Assert.AreEqual("98C02E5A6A3B82FD567B2A7DAEBE673F04CB4873", BitConverter.ToString(file2.hashOfHash).Replace("-", ""));
 
         Assert.AreEqual(0, empty.size);
-        Assert.AreEqual(638478495801362860, empty.created);
-        Assert.AreEqual(638478495801362860, empty.modified);
+        Assert.AreEqual(1712252780, empty.created);
+        Assert.AreEqual(1712252780, empty.modified);
         Assert.AreEqual("DA39A3EE5E6B4B0D3255BFEF95601890AFD80709", BitConverter.ToString(empty.hash).Replace("-", ""));
         Assert.AreEqual("BE1BDEC0AA74B4DCB079943E70528096CCA985F8", BitConverter.ToString(empty.hashOfHash).Replace("-", ""));
 
