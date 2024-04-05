@@ -51,7 +51,10 @@ public class Stats(int total, TimeSpan reportInterval)
 
 public static class Program
 {
-    private static readonly string[] IgnoredFiles = [".DS_Store"];
+    private static readonly string[] IgnoredFiles = new[] {".DS_Store"}
+        .Select(file => $"{Path.PathSeparator}{file}")
+        .ToArray();
+
     private static readonly TimeSpan ReportInterval = TimeSpan.FromSeconds(5);
 
     public static void Main(string[] args)
@@ -600,7 +603,7 @@ public static class Program
     {
         var files = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
             .Where(file => file != databaseFile)
-            .Where(file => !ignoredFiles.Contains(file))
+            .Where(file => !ignoredFiles.Any(file.EndsWith))
             .ToArray();
 
         Console.WriteLine(files.Length == 0 ? "No files found" : $"Found {files.Length} files");
