@@ -21,9 +21,38 @@ public enum VerifyFileResult
     NotFound
 }
 
+public class Stats(int total, TimeSpan reportInterval)
+{
+    private readonly Stopwatch _sw = Stopwatch.StartNew();
+    private DateTimeOffset _lastProgressReport = DateTimeOffset.Now;
+    private int _processed;
+    private long _bytesProcessed;
+
+    public void IncrementProcessed(long bytes)
+    {
+        _processed++;
+        _bytesProcessed += bytes;
+    }
+
+    public void ReportProgress(bool includeThroughput = true)
+    {
+        if (DateTimeOffset.Now - _lastProgressReport >= reportInterval)
+        {
+            var percentage = (int)((double)_processed / total * 100);
+            var elapsedSeconds = _sw.Elapsed.TotalSeconds;
+            var gps = elapsedSeconds > 0 ? _bytesProcessed / elapsedSeconds / 1024 / 1024 / 1024 : 0;
+            Console.WriteLine(includeThroughput
+                ? $"[{percentage}%] Processed {_processed} of {total} files ({gps:0.0} GB/s)"
+                : $"[{percentage}%] Processed {_processed} of {total} files");
+            _lastProgressReport = DateTimeOffset.Now;
+        }
+    }
+}
+
 public static class Program
 {
     private static readonly string[] IgnoredFiles = [".DS_Store"];
+    private static readonly TimeSpan ReportInterval = TimeSpan.FromSeconds(5);
 
     public static void Main(string[] args)
     {
@@ -112,17 +141,17 @@ public static class Program
         var dbHashOfHash = new byte[SHA1.HashSizeInBytes];
         var hashOfHash = new byte[SHA1.HashSizeInBytes];
         var fsHash = new byte[SHA1.HashSizeInBytes];
-        var processed = 0;
         var failures = new List<string>();
         var verificationFailures = new List<string>();
         var hashVerificationFailures = new List<string>();
         var changedFiles = new List<string>();
         var notFoundFiles = new List<string>();
+        var stats = new Stats(files.Length, ReportInterval);
         foreach (var file in files)
         {
             try
             {
-                var result = VerifyFile(path, file, dbHash, dbHashOfHash, hashOfHash, fsHash, selectCmd);
+                var result = VerifyFile(path, file, stats, dbHash, dbHashOfHash, hashOfHash, fsHash, selectCmd);
                 switch (result)
                 {
                     case VerifyFileResult.Ok:
@@ -146,13 +175,10 @@ public static class Program
             catch
             {
                 failures.Add(file);
+                stats.IncrementProcessed(0);
             }
 
-            processed++;
-            if (processed % 100 == 0)
-            {
-                Console.WriteLine($"Processed {processed} files");
-            }
+            stats.ReportProgress();
         }
 
         Console.WriteLine("Finished in " + sw.Elapsed);
@@ -166,8 +192,8 @@ public static class Program
         return verificationFailures.Count > 0 || hashVerificationFailures.Count > 0 || failures.Count > 0 ? 1 : 0;
     }
 
-    private static VerifyFileResult VerifyFile(string path, string file, byte[] dbHash, byte[] dbHashOfHash,
-        byte[] hashOfHash, byte[] fsHash, SqliteCommand selectCmd)
+    private static VerifyFileResult VerifyFile(string path, string file, Stats stats,
+        byte[] dbHash, byte[] dbHashOfHash, byte[] hashOfHash, byte[] fsHash, SqliteCommand selectCmd)
     {
         var fileInfo = new FileInfo(file);
         selectCmd.Parameters.Clear();
@@ -183,7 +209,8 @@ public static class Program
         var created = reader.GetInt64(1);
         var modified = reader.GetInt64(2);
 
-        if (fileInfo.Length != size || fileInfo.CreationTimeUtc.Ticks != created || fileInfo.LastWriteTimeUtc.Ticks != modified)
+        if (fileInfo.Length != size || fileInfo.CreationTimeUtc.Ticks != created ||
+            fileInfo.LastWriteTimeUtc.Ticks != modified)
         {
             Console.WriteLine($"File '{file}' has changed");
             return VerifyFileResult.FileChanged;
@@ -194,6 +221,7 @@ public static class Program
         {
             throw new Exception($"Error reading hash from the database: invalid hash length {read}");
         }
+
         read = reader.GetBytes(4, 0, dbHashOfHash, 0, dbHashOfHash.Length);
         if (read != dbHashOfHash.Length)
         {
@@ -211,9 +239,11 @@ public static class Program
         if (!VerifyHash(fsHash, dbHash))
         {
             Console.WriteLine($"File '{file}' failed verification");
+            stats.IncrementProcessed(fileInfo.Length);
             return VerifyFileResult.Failed;
         }
 
+        stats.IncrementProcessed(fileInfo.Length);
         return VerifyFileResult.Ok;
     }
 
@@ -282,10 +312,10 @@ public static class Program
 
         var hash = new byte[SHA1.HashSizeInBytes];
         var hashOfHash = new byte[SHA1.HashSizeInBytes];
-        var processed = 0;
         var failures = new List<string>();
         var changedFiles = new List<string>();
         var newFiles = new List<string>();
+        var stats = new Stats(files.Length, ReportInterval);
         foreach (var file in files)
         {
             try
@@ -305,16 +335,17 @@ public static class Program
                         throw new ArgumentOutOfRangeException(nameof(result));
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error processing file '{file}': {ex.Message}");
                 failures.Add(file);
             }
-
-            processed++;
-            if (processed % 100 == 0)
+            finally
             {
-                Console.WriteLine($"Processed {processed} files");
+                stats.IncrementProcessed(0);
             }
+
+            stats.ReportProgress(includeThroughput: false);
         }
 
         var cmd = db.CreateCommand();
@@ -456,24 +487,22 @@ public static class Program
 
         var hash = new byte[SHA1.HashSizeInBytes];
         var hashOfHash = new byte[SHA1.HashSizeInBytes];
-        var processed = 0;
         var failures = new List<string>();
+        var stats = new Stats(files.Length, ReportInterval);
         foreach (var file in files)
         {
             try
             {
-                BuildFile(path, file, hash, hashOfHash, cmd);
+                BuildFile(path, file, stats, hash, hashOfHash, cmd);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error processing file '{file}': {ex.Message}");
                 failures.Add(file);
+                stats.IncrementProcessed(0);
             }
 
-            processed++;
-            if (processed % 100 == 0)
-            {
-                Console.WriteLine($"Processed {processed} files");
-            }
+            stats.ReportProgress();
         }
 
         transaction.Commit();
@@ -483,29 +512,24 @@ public static class Program
         return failures.Count > 0 ? 1 : 0;
     }
 
-    private static void BuildFile(string path, string file, byte[] hash, byte[] hashOfHash, SqliteCommand cmd)
+    private static void BuildFile(string path, string file, Stats stats, byte[] hash, byte[] hashOfHash,
+        SqliteCommand cmd)
     {
-        try
-        {
-            var fileInfo = new FileInfo(file);
-            GetFileHash(file, hash);
-            VerifyHashLength(SHA1.HashData(hash, hashOfHash));
+        var fileInfo = new FileInfo(file);
+        GetFileHash(file, hash);
+        VerifyHashLength(SHA1.HashData(hash, hashOfHash));
 
-            cmd.Parameters.Clear();
-            cmd.Parameters.AddWithValue("@path", Path.GetRelativePath(path, file));
-            cmd.Parameters.AddWithValue("@size", fileInfo.Length);
-            cmd.Parameters.AddWithValue("@created", fileInfo.CreationTimeUtc.Ticks);
-            cmd.Parameters.AddWithValue("@modified", fileInfo.LastWriteTimeUtc.Ticks);
-            cmd.Parameters.AddWithValue("@hash", hash);
-            cmd.Parameters.AddWithValue("@hash_of_hash", hashOfHash);
+        cmd.Parameters.Clear();
+        cmd.Parameters.AddWithValue("@path", Path.GetRelativePath(path, file));
+        cmd.Parameters.AddWithValue("@size", fileInfo.Length);
+        cmd.Parameters.AddWithValue("@created", fileInfo.CreationTimeUtc.Ticks);
+        cmd.Parameters.AddWithValue("@modified", fileInfo.LastWriteTimeUtc.Ticks);
+        cmd.Parameters.AddWithValue("@hash", hash);
+        cmd.Parameters.AddWithValue("@hash_of_hash", hashOfHash);
 
-            VerifySingleRow(cmd.ExecuteNonQuery());
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"Error processing file '{file}': {e.Message}");
-            throw;
-        }
+        VerifySingleRow(cmd.ExecuteNonQuery());
+
+        stats.IncrementProcessed(fileInfo.Length);
     }
 
     private static void GetFileHash(string file, byte[] hash)
@@ -600,5 +624,15 @@ public static class Program
         }
 
         return true;
+    }
+
+    private static void ReportProgress(int processed, int total, ref DateTimeOffset last)
+    {
+        var now = DateTimeOffset.Now;
+        if (now - last > TimeSpan.FromSeconds(5))
+        {
+            Console.WriteLine($"Processed {processed} of {total} files");
+            last = now;
+        }
     }
 }
