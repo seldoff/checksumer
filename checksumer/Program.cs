@@ -437,22 +437,10 @@ public static class Program
             return 1;
         }
 
-        if (!Directory.Exists(path))
-        {
-            Console.WriteLine($"Path '{path}' does not exist");
-            return 1;
-        }
-
         var databaseFile = args.Skip(1).FirstOrDefault()?.Trim();
         if (string.IsNullOrWhiteSpace(databaseFile))
         {
             Console.WriteLine("Please specify database file");
-            return 1;
-        }
-
-        if (File.Exists(databaseFile))
-        {
-            Console.WriteLine($"Database file '{databaseFile}' already exists");
             return 1;
         }
 
@@ -469,6 +457,18 @@ public static class Program
 
     public static int Build(string path, string databaseFile, IReadOnlyCollection<string> ignoredFiles)
     {
+        if (File.Exists(databaseFile))
+        {
+            Console.WriteLine($"Database file '{databaseFile}' already exists");
+            return 1;
+        }
+
+        if (!Directory.Exists(path))
+        {
+            Console.WriteLine($"Path '{path}' does not exist");
+            return 1;
+        }
+
         var sw = Stopwatch.StartNew();
         databaseFile = Path.GetFullPath(databaseFile);
         Console.WriteLine($"Building index ('{databaseFile}') for path '{path}'");
