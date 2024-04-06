@@ -24,7 +24,8 @@ public class BuildTests
     public void Build()
     {
         var databaseFile = TempFileName();
-        Assert.AreEqual(0, checksumer.Build.Run(Path.Combine(".", "TestData", "dir1"), databaseFile, [".gitkeep"]));
+        var path = Path.Combine(".", "TestData", "dir1");
+        Assert.AreEqual(0, checksumer.Build.Run(path, databaseFile, [".gitkeep"]));
 
         using SqliteConnection db = new($"Data Source={databaseFile}");
         db.Open();
@@ -51,20 +52,20 @@ public class BuildTests
         var empty = rows.Single(r => r.path == "empty.txt");
 
         Assert.AreEqual(15, file1.size);
-        Assert.AreEqual(1712252423, file1.created);
-        Assert.AreEqual(1712252439, file1.modified);
+        Assert.AreEqual(Created(file1.path, path), file1.created);
+        Assert.AreEqual(Modified(file1.path, path), file1.modified);
         Assert.AreEqual("4D78990B1F2B696B9BEF40509A05625956AA42E2", BitConverter.ToString(file1.hash).Replace("-", ""));
         Assert.AreEqual("5E1A4EB288B6862B2CAD83143942907E19B093B6", BitConverter.ToString(file1.hashOfHash).Replace("-", ""));
 
         Assert.AreEqual(16, file2.size);
-        Assert.AreEqual(1712326713, file2.created);
-        Assert.AreEqual(1712343576, file2.modified);
+        Assert.AreEqual(Created(file2.path, path), file2.created);
+        Assert.AreEqual(Modified(file2.path, path), file2.modified);
         Assert.AreEqual("D5229A9B110B72F7C42A782428034645E1245D50", BitConverter.ToString(file2.hash).Replace("-", ""));
         Assert.AreEqual("98C02E5A6A3B82FD567B2A7DAEBE673F04CB4873", BitConverter.ToString(file2.hashOfHash).Replace("-", ""));
 
         Assert.AreEqual(0, empty.size);
-        Assert.AreEqual(1712252780, empty.created);
-        Assert.AreEqual(1712252780, empty.modified);
+        Assert.AreEqual(Created(empty.path, path), empty.created);
+        Assert.AreEqual(Modified(empty.path, path), empty.modified);
         Assert.AreEqual("DA39A3EE5E6B4B0D3255BFEF95601890AFD80709", BitConverter.ToString(empty.hash).Replace("-", ""));
         Assert.AreEqual("BE1BDEC0AA74B4DCB079943E70528096CCA985F8", BitConverter.ToString(empty.hashOfHash).Replace("-", ""));
 
@@ -81,6 +82,9 @@ public class BuildTests
         Assert.IsTrue(metaReader.IsDBNull(4));
 
         Assert.False(metaReader.Read());
+
+        long Created(string fileName, string path) => new FileInfo(Path.Combine(path, fileName)).CreationTimeUtc.ToUnixTime();
+        long Modified(string fileName, string path) => new FileInfo(Path.Combine(path, fileName)).LastWriteTimeUtc.ToUnixTime();
     }
 
     private string TempFileName() => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
