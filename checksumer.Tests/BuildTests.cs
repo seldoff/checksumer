@@ -68,13 +68,14 @@ public class BuildTests
         Assert.AreEqual("BE1BDEC0AA74B4DCB079943E70528096CCA985F8", BitConverter.ToString(empty.hashOfHash).Replace("-", ""));
 
         using var metaCmd = db.CreateCommand();
-        metaCmd.CommandText = "SELECT version, initial_path, created FROM meta";
+        metaCmd.CommandText = "SELECT version, algorithm, initial_path, created FROM meta";
         using var metaReader = metaCmd.ExecuteReader();
         metaReader.Read();
 
         Assert.AreEqual(1, metaReader.GetInt32(0));
-        Assert.AreEqual(Path.GetFullPath(Path.Combine(".", "TestData", "dir1")), metaReader.GetString(1));
-        var created = new DateTime(metaReader.GetInt64(2));
+        Assert.AreEqual("sha1", metaReader.GetString(1));
+        Assert.AreEqual(Path.GetFullPath(Path.Combine(".", "TestData", "dir1")), metaReader.GetString(2));
+        var created = new DateTime(metaReader.GetInt64(3));
         Assert.LessOrEqual(DateTime.UtcNow - created, TimeSpan.FromSeconds(1));
 
         Assert.False(metaReader.Read());
