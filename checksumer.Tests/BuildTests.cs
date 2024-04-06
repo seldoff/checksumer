@@ -8,7 +8,7 @@ public class BuildTests
     public void EmptySourceDirectory()
     {
         var databaseFile = TempFileName();
-        Assert.AreEqual(1, Program.Build(Path.Combine(".", "TestData", "empty"), databaseFile, [".gitkeep"]));
+        Assert.AreEqual(1, checksumer.Build.Run(Path.Combine(".", "TestData", "empty"), databaseFile, [".gitkeep"]));
     }
 
     [Test]
@@ -16,14 +16,15 @@ public class BuildTests
     {
         var databaseFile = TempFileName();
         File.Create(databaseFile).Dispose();
-        Assert.AreEqual(1, Program.Build(Path.Combine(".", "TestData", "dir1"), databaseFile, Array.Empty<string>()));
+        Assert.AreEqual(1,
+            checksumer.Build.Run(Path.Combine(".", "TestData", "dir1"), databaseFile, Array.Empty<string>()));
     }
 
     [Test]
     public void Build()
     {
         var databaseFile = TempFileName();
-        Assert.AreEqual(0, Program.Build(Path.Combine(".", "TestData", "dir1"), databaseFile, [".gitkeep"]));
+        Assert.AreEqual(0, checksumer.Build.Run(Path.Combine(".", "TestData", "dir1"), databaseFile, [".gitkeep"]));
 
         using SqliteConnection db = new($"Data Source={databaseFile}");
         db.Open();
@@ -68,7 +69,7 @@ public class BuildTests
         Assert.AreEqual("BE1BDEC0AA74B4DCB079943E70528096CCA985F8", BitConverter.ToString(empty.hashOfHash).Replace("-", ""));
 
         using var metaCmd = db.CreateCommand();
-        metaCmd.CommandText = "SELECT version, algorithm, initial_path, created FROM meta";
+        metaCmd.CommandText = "SELECT version, algorithm, initial_path, created, last_updated FROM meta";
         using var metaReader = metaCmd.ExecuteReader();
         metaReader.Read();
 
@@ -77,6 +78,7 @@ public class BuildTests
         Assert.AreEqual(Path.GetFullPath(Path.Combine(".", "TestData", "dir1")), metaReader.GetString(2));
         var created = new DateTime(metaReader.GetInt64(3));
         Assert.LessOrEqual(DateTime.UtcNow - created, TimeSpan.FromSeconds(1));
+        Assert.IsTrue(metaReader.IsDBNull(4));
 
         Assert.False(metaReader.Read());
     }
